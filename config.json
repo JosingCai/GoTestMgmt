@@ -1,0 +1,42 @@
+{
+	"database": {
+		"default": {
+			"host": "127.0.0.1",
+			"port": "3306",
+			"user": "username",
+			"pwd": "passowrd",
+			"name": "testmgmt",
+			"max_idle_con": 5,
+			"max_open_con": 10,
+			"driver": "mysql"
+		}
+	},
+	"app_id": "uPkhI73C0y3p",
+	"language": "cn",
+	"prefix": "admin",
+	"theme": "sword",
+	"store": {
+		"path": "./uploads",
+		"prefix": "uploads"
+	},
+	"title": "TestMgmt",
+	"logo": "TestMgmt",
+	"mini_logo": "TM",
+	"index": "/",
+	"login_url": "/login",
+	"debug": true,
+	"env": "local",
+	"info_log": "testmgmt/logs/info.log",
+	"error_log": "testmgmt/logs/error.log",
+	"access_log": "testmgmt/logs/access.log",
+	"session_life_time": 7200,
+	"file_upload_engine": {
+		"name": "local"
+	},
+	"login_title": "TestMgmt",
+	"login_logo": "TestMgmt",
+	"auth_user_table": "goadmin_users",
+	"bootstrap_file_path": "testmgmt/bootstrap.go",
+	"go_mod_file_path": "testmgmt/go.mod",
+	"asset_root_path": "./public/"
+}
