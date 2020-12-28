@@ -13,8 +13,10 @@ func GetIssueTagCountTable(ctx *context.Context) table.Table {
 	issueTagCount := table.NewDefaultTable(table.DefaultConfigWithDriver("mysql"))
 
 	info := issueTagCount.GetInfo().HideFilterArea().SetFilterFormLayout(form.LayoutThreeCol)
-
-	info.AddField("Id", "id", db.Int)
+	info.SetFilterFormHeadWidth(4)
+	info.SetFilterFormInputWidth(8)
+	info.AddField("Id", "id", db.Int).
+		FieldHide()
 	info.AddField("版本分支", "milestone", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("标签", "tag", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("总数", "all_count", db.Int)

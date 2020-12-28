@@ -20,8 +20,10 @@ func GetHostTable(ctx *context.Context) table.Table {
 	host := table.NewDefaultTable(table.DefaultConfigWithDriver("mysql"))
 
 	info := host.GetInfo().HideFilterArea().SetFilterFormLayout(form.LayoutThreeCol)
-
-	info.AddField("ID", "id", db.Int).FieldSortable()
+	info.SetFilterFormHeadWidth(4)
+	info.SetFilterFormInputWidth(8)
+	info.AddField("ID", "id", db.Int).
+		FieldHide()
 	info.AddField("项目名称", "project", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("IP", "ip", db.Char).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("协议", "protocol", db.Char).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
@@ -126,57 +128,63 @@ func GetHostTable(ctx *context.Context) table.Table {
 
 	info.AddButton("Excel导入测试用例", icon.Android, action.Ajax("testcase_excel_batch_import",
 		func(ctx *context.Context) (success bool, msg string, data interface{}) {
-			idStr := ctx.FormValue("ids")
 			var status string
-			ids := strings.Split(idStr, ",")
-			for _, id := range ids {
-				if err := biz.RunApiCase(id, ""); err == nil {
-					status = "导入完成"
-				} else {
-					status = fmt.Sprintf("导入失败：%s: %s", id, err)
-					return false, status, ""
-				}
-			}
+			status = "功能暂不支持"
+			// idStr := ctx.FormValue("ids")
+			// ids := strings.Split(idStr, ",")
+			// for _, id := range ids {
+			// 	if err := biz.GetSwagger(id); err == nil {
+			// 		status = "导入完成"
+			// 	} else {
+			// 		status = fmt.Sprintf("导入失败：%s", err)
+			// 		return false, status, ""
+			// 	}
+			// }
 			return true, status, ""
 		}))
 
 	info.AddActionButton("Excel导入测试用例", action.Ajax("testcase_excel_import",
 		func(ctx *context.Context) (success bool, msg string, data interface{}) {
-			id := ctx.FormValue("id")
 			var status string
-			if err := biz.RunApiCase(id, ""); err == nil {
-				status = "导入完成"
-			} else {
-				status = fmt.Sprintf("导入失败：%s: %s", id, err)
-			}
+			status = "功能暂不支持"
+			// id := ctx.FormValue("id")
+			// if err := biz.GetSwagger(id); err == nil {
+			// 	status = "导入完成"
+			// } else {
+			// 	status = fmt.Sprintf("导入失败：%s", err)
+			// }
+
 			return true, status, ""
 		}))
 
 	info.AddButton("Excel导入测试计划", icon.Android, action.Ajax("testprogress_batch_import",
 		func(ctx *context.Context) (success bool, msg string, data interface{}) {
-			idStr := ctx.FormValue("ids")
 			var status string
-			ids := strings.Split(idStr, ",")
-			for _, id := range ids {
-				if err := biz.RunApiCase(id, ""); err == nil {
-					status = "导入完成"
-				} else {
-					status = fmt.Sprintf("导入失败：%s: %s", id, err)
-					return false, status, ""
-				}
-			}
+			status = "功能暂不支持"
+			// idStr := ctx.FormValue("ids")
+			// ids := strings.Split(idStr, ",")
+			// for _, id := range ids {
+			// 	if err := biz.GetSwagger(id); err == nil {
+			// 		status = "导入完成"
+			// 	} else {
+			// 		status = fmt.Sprintf("导入失败：%s", err)
+			// 		return false, status, ""
+			// 	}
+			// }
 			return true, status, ""
 		}))
 
 	info.AddActionButton("Excel导入测试计划", action.Ajax("testprogress_import",
 		func(ctx *context.Context) (success bool, msg string, data interface{}) {
-			id := ctx.FormValue("id")
 			var status string
-			if err := biz.RunApiCase(id, ""); err == nil {
-				status = "导入完成"
-			} else {
-				status = fmt.Sprintf("导入失败：%s: %s", id, err)
-			}
+			status = "功能暂不支持"
+			// id := ctx.FormValue("id")
+			// if err := biz.GetSwagger(id); err == nil {
+			// 	status = "导入完成"
+			// } else {
+			// 	status = fmt.Sprintf("导入失败：%s", err)
+			// }
+
 			return true, status, ""
 		}))
 
@@ -231,6 +239,62 @@ func GetHostTable(ctx *context.Context) table.Table {
 				status = "统计完成"
 			} else {
 				status = fmt.Sprintf("统计失败：%s: %s", id, err)
+			}
+			return true, status, ""
+		}))
+
+	info.AddButton("用例统计", icon.Android, action.Ajax("cases_batch_sum_up",
+		func(ctx *context.Context) (success bool, msg string, data interface{}) {
+			idStr := ctx.FormValue("ids")
+			var status string
+			ids := strings.Split(idStr, ",")
+			for _, id := range ids {
+				if err := biz.CountCases(id); err == nil {
+					status = "统计完成"
+				} else {
+					status = fmt.Sprintf("统计失败：%s: %s", id, err)
+					return false, status, ""
+				}
+			}
+			return true, status, ""
+		}))
+
+	info.AddActionButton("用例统计", action.Ajax("cases_sum_up",
+		func(ctx *context.Context) (success bool, msg string, data interface{}) {
+			id := ctx.FormValue("id")
+			var status string
+			if err := biz.CountCases(id); err == nil {
+				status = "统计完成"
+			} else {
+				status = fmt.Sprintf("统计失败：%s: %s", id, err)
+			}
+			return true, status, ""
+		}))
+
+	info.AddButton("生成测试报告", icon.Android, action.Ajax("report_batch_create",
+		func(ctx *context.Context) (success bool, msg string, data interface{}) {
+			idStr := ctx.FormValue("ids")
+			var status string
+			ids := strings.Split(idStr, ",")
+			for _, id := range ids {
+				if err := biz.CreateReport(id); err == nil {
+					status = "生成完成"
+				} else {
+					status = fmt.Sprintf("生成失败：%s: %s", id, err)
+					return false, status, ""
+				}
+			}
+			return true, status, ""
+		}))
+
+	info.AddActionButton("生成测试报告", action.Ajax("report_create",
+		func(ctx *context.Context) (success bool, msg string, data interface{}) {
+			id := ctx.FormValue("id")
+			var status string
+			if err := biz.CreateReport(id); err == nil {
+				status = "生成完成"
+			} else {
+				status = fmt.Sprintf("生成失败：%s: %s", id, err)
 			}
 			return true, status, ""
 		}))

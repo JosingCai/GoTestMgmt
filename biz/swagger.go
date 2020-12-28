@@ -6,9 +6,18 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strings"
+	"time"
 
 	"testmgmt/models"
 )
+
+var (
+	BATHPATH string
+)
+
+type Config struct {
+	FileBasePath string `json:"file_base_path"`
+}
 
 type Swagger struct {
 	Paths       map[string]PathDef   `json:"paths"`
@@ -246,6 +255,8 @@ func (pathDef PathDef) GetApiDetail(method, path, project string, allDefini Doub
 	apiCase.Project = project
 	apiCase.Raw = apiTable.ApiFunction + "|" + "http" + "|" + apiTable.HttpMethod + "|" + path + "|" + string(mh) + "|" + string(mp) + "|" + string(mq) + "|" + string(mb) + "|" + string(ms)
 	apiCase.Module = apiTable.Module
+	curTime := time.Now()
+	apiCase.CreatedAt = curTime.Format(baseFormat)
 	var dbApi DbApiCase
 	models.Orm.Table("api_case").Where("project = ? and case_id = ?", project, caseId).Find(&dbApi)
 	if len(dbApi.CaseID) == 0 {
@@ -265,9 +276,9 @@ func GetSwagger(id string) (err error) {
 		return
 	}
 	project := host.Project
-	fileName := fmt.Sprintf("/tmp/api/%s.json", project)
+	fileName := fmt.Sprintf("%s/testmgmt/api/%s.json", BATHPATH, project)
 	content, err := ioutil.ReadFile(fileName)
-	LogHandle.Printf("content: %s", content)
+	// LogHandle.Printf("content: %s", content)
 	if err != nil {
 		return
 	}
@@ -299,5 +310,25 @@ func GetSwagger(id string) (err error) {
 	}
 
 	return
+
+}
+
+func init() {
+	content, err := ioutil.ReadFile("./config.json")
+	if err != nil {
+		info := fmt.Sprintf("Init Config Failed: %s", err)
+		panic(info)
+	}
+	var config Config
+	err = json.Unmarshal([]byte(content), &config)
+	if err != nil {
+		info := fmt.Sprintf("Init Config Failed: %s", err)
+		panic(info)
+	}
+	if len(config.FileBasePath) == 0 {
+		panic("Not Found file_base_path")
+	}
+
+	BATHPATH = config.FileBasePath
 
 }

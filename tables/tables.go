@@ -25,6 +25,7 @@ import "github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
 // "test_progress_schedule" => http://localhost:9033/admin/info/test_progress_schedule
 // "api_detail" => http://localhost:9033/admin/info/api_detail
 // "api_test_data" => http://localhost:9033/admin/info/api_test_data
+// "testcase_count" => http://localhost:9033/admin/info/testcase_count
 //
 // example end
 //
@@ -45,6 +46,7 @@ var Generators = map[string]table.Generator{
 	"test_progress_schedule": GetTestProgressScheduleTable,
 	"api_detail":             GetApiDetailTable,
 	"api_test_data":          GetApiTestDataTable,
+	"testcase_count":         GetTestcaseCountTable,
 
 	// generators end
 }

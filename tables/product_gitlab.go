@@ -4,7 +4,9 @@ import (
 	"github.com/GoAdminGroup/go-admin/context"
 	"github.com/GoAdminGroup/go-admin/modules/db"
 	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
+	"github.com/GoAdminGroup/go-admin/template/icon"
 	"github.com/GoAdminGroup/go-admin/template/types"
+	"github.com/GoAdminGroup/go-admin/template/types/action"
 	"github.com/GoAdminGroup/go-admin/template/types/form"
 )
 
@@ -13,8 +15,10 @@ func GetProductGitlabTable(ctx *context.Context) table.Table {
 	productGitlab := table.NewDefaultTable(table.DefaultConfigWithDriver("mysql"))
 
 	info := productGitlab.GetInfo().HideFilterArea().SetFilterFormLayout(form.LayoutThreeCol)
-
-	info.AddField("Id", "id", db.Int)
+	info.SetFilterFormHeadWidth(4)
+	info.SetFilterFormInputWidth(8)
+	info.AddField("Id", "id", db.Int).
+		FieldHide()
 	info.AddField("URL", "repo", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("产品", "product", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("RSS_TOKEN", "rss_token", db.Varchar)
@@ -25,6 +29,68 @@ func GetProductGitlabTable(ctx *context.Context) table.Table {
 	info.AddField("更新时间", "updated_at", db.Timestamp)
 	info.AddField("删除时间", "deleted_at", db.Timestamp).
 		FieldHide()
+
+	info.AddButton("同步", icon.Android, action.Ajax("issue_batch_sync",
+		func(ctx *context.Context) (success bool, msg string, data interface{}) {
+			var status string
+			status = "功能暂不支持"
+			// idStr := ctx.FormValue("ids")
+			// ids := strings.Split(idStr, ",")
+			// for _, id := range ids {
+			// 	if err := biz.GetSwagger(id); err == nil {
+			// 		status = "导入完成"
+			// 	} else {
+			// 		status = fmt.Sprintf("导入失败：%s", err)
+			// 		return false, status, ""
+			// 	}
+			// }
+			return true, status, ""
+		}))
+
+	info.AddActionButton("同步", action.Ajax("issue_sync",
+		func(ctx *context.Context) (success bool, msg string, data interface{}) {
+			var status string
+			status = "功能暂不支持"
+			// id := ctx.FormValue("id")
+			// if err := biz.GetSwagger(id); err == nil {
+			// 	status = "导入完成"
+			// } else {
+			// 	status = fmt.Sprintf("导入失败：%s", err)
+			// }
+
+			return true, status, ""
+		}))
+
+	info.AddButton("统计", icon.Android, action.Ajax("issue_batch_count",
+		func(ctx *context.Context) (success bool, msg string, data interface{}) {
+			var status string
+			status = "功能暂不支持"
+			// idStr := ctx.FormValue("ids")
+			// ids := strings.Split(idStr, ",")
+			// for _, id := range ids {
+			// 	if err := biz.GetSwagger(id); err == nil {
+			// 		status = "导入完成"
+			// 	} else {
+			// 		status = fmt.Sprintf("导入失败：%s", err)
+			// 		return false, status, ""
+			// 	}
+			// }
+			return true, status, ""
+		}))
+
+	info.AddActionButton("统计", action.Ajax("issue_count",
+		func(ctx *context.Context) (success bool, msg string, data interface{}) {
+			var status string
+			status = "功能暂不支持"
+			// id := ctx.FormValue("id")
+			// if err := biz.GetSwagger(id); err == nil {
+			// 	status = "导入完成"
+			// } else {
+			// 	status = fmt.Sprintf("导入失败：%s", err)
+			// }
+
+			return true, status, ""
+		}))
 
 	info.SetTable("product_gitlab").SetTitle("Gitlab列表").SetDescription("Gitlab列表")
 

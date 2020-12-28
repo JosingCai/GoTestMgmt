@@ -2,6 +2,7 @@ package biz
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +17,8 @@ import (
 
 	"testmgmt/models"
 )
+
+const baseFormat = "2006-01-02 15:04:05"
 
 type Response struct {
 	Status        string                 `json:"status,omitempty"`
@@ -53,10 +56,12 @@ type ApiTestDetail struct {
 	Response    string `gorm:"column:response" json:"response"`
 	TestResult  string `gorm:"column:test_result" json:"test_result"`
 	FailReason  string `gorm:"column:fail_reason" json:"fail_reason"`
+	CreatedAt   string `gorm:"column:created_at" json:"created_at"`
 	Project     string `gorm:"column:project" json:"project"`
 }
 
 type ApiTestData struct {
+	Id             int    `gorm:"column:id" json:"id"`
 	DataDesc       string `gorm:"column:data_desc" json:"data_desc"`
 	ApiFunction    string `gorm:"column:apiFunction" json:"apiFunction"`
 	CaseID         string `gorm:"column:case_id" json:"case_id"`
@@ -81,6 +86,7 @@ type ApiTestResult struct {
 	RequestVars string `gorm:"column:requestVars" json:"request_vars"`
 	Result      string `gorm:"column:result" json:"result"`
 	OutVars     string `gorm:"column:outVars" json:"out_vars"`
+	UpdatedAt   string `gorm:"column:updated_at" json:"updated_at"`
 	Project     string `gorm:"column:project" json:"project"`
 }
 
@@ -112,11 +118,13 @@ type API struct {
 
 func GetAbDef() (inDef map[string]string) {
 	inDef = make(map[string]string)
-	inDef["intAb"] = "-1,65536"
-	inDef["intNor"] = "1,10"
+	inDef["intAb"] = "65536,-1"
+	inDef["intNor"] = "10,1"
 	inDef["strAb"] = GetRandomStr(256) + "," + GetRandomStr(65)
 	inDef["strNor"] = GetRandomStr(255) + "," + GetRandomStr(8)
-	inDef["objAb"] = "[],{}"
+	inDef["arrAb"] = "65536,-1"
+	inDef["arrNor"] = "1,2"
+	inDef["objAb"] = "{}"
 	inDef["bool"] = "true,false"
 	return
 }
@@ -138,6 +146,7 @@ type APICase struct {
 	ChkVars    string `gorm:"column:chkVars" json:"chk_vars"`
 	ParamDef   string `gorm:"column:param_def" json:"param_def"`
 	Raw        string `gorm:"column:raw" json:"raw"`
+	CreatedAt  string `gorm:"column:created_at" json:"created_at"`
 	Project    string `gorm:"column:project" json:"project"`
 }
 
@@ -151,47 +160,86 @@ func (apiCase APICase) IsRun() (err error) {
 
 }
 
-func (apiCase APICase) SaveTestResult(requestData map[string]interface{}, response Response) (err error) {
+func (apiCase APICase) GetLastValue(mapped map[string]string, data map[string]interface{}) (map[string]string, map[string]interface{}) {
+	if data == nil {
+		return mapped, nil
+	}
+	var mKeys, dKeys []string
+	for k := range mapped {
+		mKeys = append(mKeys, k)
+	}
+
+	var tmpMap map[string]interface{}
+	tmpMap = make(map[string]interface{})
+	var depDefs map[string]string
+	depDefs = make(map[string]string)
+	i := 0
+	for _, v := range mKeys {
+		if strings.Contains(mapped[v], "-") || strings.Contains(mapped[v], "*") {
+			depDefs[v] = mapped[v]
+			dKeys = append(dKeys, v)
+			i++
+		} else {
+			varType := fmt.Sprintf("%T", data[mapped[v]])
+			var strValue string
+			switch varType {
+			case "float64":
+				tmpVar := data[mapped[v]].(float64)
+				strValue = strconv.FormatFloat(tmpVar, 'f', 0, 64)
+			case "string":
+				strValue = data[mapped[v]].(string)
+			case "bool":
+				strValue = strconv.FormatBool(data[mapped[v]].(bool))
+			default:
+				LogHandle.Printf("A Problem had Occured at Get Out Var: %s", v)
+			}
+			mapped[v] = strValue
+		}
+	}
+	if i == 0 {
+		LogHandle.Printf("mapped: %+v", mapped)
+		return mapped, nil
+	}
+
+	j := 0
+	for _, v := range dKeys {
+		items := strings.SplitN(mapped[v], "-", 2)
+		mapped[v] = items[1]
+		tmpMap = data[items[0]].(map[string]interface{})
+		j++
+		if j == len(dKeys) {
+			return apiCase.GetLastValue(mapped, tmpMap)
+		}
+
+	}
+	LogHandle.Printf("mapped: %+v", mapped)
+	return mapped, nil
+}
+
+func (apiCase APICase) SaveTestResult(requestData, response map[string]interface{}) (err error) {
 	var testResult ApiTestResult
 	var dbResult DbApiTestResult
 	testResult.CaseID = apiCase.CaseID
 	reqStr, err := json.Marshal(requestData)
 	testResult.RequestVars = string(reqStr)
-	testResult.Result = response.Status
-	var mapDepOut map[string]string
-	mapDepOut = make(map[string]string)
+	if value, ok := response["status"]; ok {
+		testResult.Result = value.(string)
+	}
+
 	if len(apiCase.OutVars) > 0 {
 		var mapOutVar map[string]string
 		mapOutVar = make(map[string]string)
 		err = json.Unmarshal([]byte(apiCase.OutVars), &mapOutVar)
-		LogHandle.Printf("mapOutVar: %v", mapOutVar)
-		for k, v := range mapOutVar {
-			varType := fmt.Sprintf("%T", response.Content[v])
-			getVar := response.Content[v]
-			if varType == "int" {
-				intStr := strconv.Itoa(getVar.(int))
-				mapDepOut[k] = intStr
-			} else if varType == "float64" {
-				tmpVar := getVar.(float64)
-				intStr := strconv.FormatFloat(tmpVar, 'f', 0, 64)
-				mapDepOut[k] = intStr
-			} else if varType == "string" {
-				getStr := getVar.(string)
-				mapDepOut[k] = getStr
-			} else {
-				err = fmt.Errorf("varType: %s, not suitable", varType)
-				LogHandle.Printf("Error: %s", err)
-				return
-			}
-		}
-		LogHandle.Printf("mapDepOut: %q", mapDepOut)
+		retOut, _ := apiCase.GetLastValue(mapOutVar, response)
 		var outByte []byte
-		outByte, err = json.Marshal(mapDepOut)
+		outByte, err = json.Marshal(retOut)
+		testResult.OutVars = string(outByte)
 		testResult.OutVars = string(outByte)
 	}
 
 	testResult.Project = apiCase.Project
-
+	curTime := time.Now()
+	testResult.UpdatedAt = curTime.Format(baseFormat)
 	models.Orm.Table("api_test_result").Where("project = ? and case_id = ?", apiCase.Project, apiCase.CaseID).Find(&dbResult)
 
 	if len(dbResult.CaseID) == 0 {
@@ -202,16 +250,24 @@ func (apiCase APICase) SaveTestResult(requestData map[string]interface{}, respon
 	return
 }
 
-func (apiCase APICase) SaveDetailResult(url, apiFunction string, requestData map[string]interface{}, response Response) (err error) {
-	var testDetail, testResultDB ApiTestDetail
-	if response.Status == "failure" || !response.IsSuccess {
-		if len(response.Message) == 0 {
-			testDetail.FailReason = response.ResultMessage
+func (apiCase APICase) SaveDetailResult(url, apiFunction string, requestData map[string]interface{}, response map[string]interface{}) (err error) {
+	var testDetail ApiTestDetail
+	if value, ok := response["status"]; ok {
+		testDetail.TestResult = value.(string)
+		if value.(string) == "failure" {
+			testDetail.FailReason = response["message"].(string)
 		} else {
-			testDetail.FailReason = response.Message
+			testDetail.TestResult = "success"
 		}
-
+	} else if value, ok := response["isSuccess"]; ok {
+		if !value.(bool) {
+			testDetail.FailReason = response["resultMessage"].(string)
+			testDetail.TestResult = "failure"
+		} else {
+			testDetail.TestResult = "success"
+		}
 	}
+
 	testDetail.CaseID = apiCase.CaseID
 	testDetail.ApiFunction = apiFunction
 	testDetail.Url = url
@@ -221,30 +277,16 @@ func (apiCase APICase) SaveDetailResult(url, apiFunction string, requestData map
 
 	resByte, err := json.Marshal(response)
 	testDetail.Response = string(resByte)
-	if len(response.Status) == 0 {
-		if response.IsSuccess {
-			testDetail.TestResult = "success"
-		} else {
-			testDetail.TestResult = "failure"
-		}
-	} else {
-		testDetail.TestResult = response.Status
-	}
 
 	testDetail.Project = apiCase.Project
+	curTime := time.Now()
+	testDetail.CreatedAt = curTime.Format(baseFormat)
 
 	err = models.Orm.Table("api_test_detail").Create(testDetail).Error
 	if err != nil {
 		LogHandle.Printf("Error: %s", err)
 	}
 
-	models.Orm.Table("api_test_detail").Where("project = ? and case_id = ?", apiCase.Project, apiCase.CaseID).Find(&testResultDB)
-	if len(testResultDB.CaseID) == 0 {
-		err = models.Orm.Table("api_test_detail").Create(testDetail).Error
-
-	} else {
-		err = models.Orm.Table("api_test_detail").Where("project = ? and case_id = ?", apiCase.Project, apiCase.CaseID).Update(testDetail).Error
-	}
 	return
 }
 
@@ -302,10 +344,8 @@ func (api API) GetFormatDepVars(depOutVars map[string]string) (retOutVars map[st
 		}
 
 	}
-	LogHandle.Printf("allVar: %v", allVar)
+	retOutVars = depOutVars
 	var host Host
-	// var abDef map[string]string
-	// abDef = make(map[string]string)
 	abDef := GetAbDef()
 	models.Orm.Table("host").Where("project = ?", api.Project).Find(&host)
 	for k, v := range allVar {
@@ -316,7 +356,7 @@ func (api API) GetFormatDepVars(depOutVars map[string]string) (retOutVars map[st
 				} else if v == "string" {
 					retOutVars[k] = abDef["strAb"]
 				} else if v == "array" {
-					retOutVars[k] = abDef["objAb"]
+					retOutVars[k] = abDef["arrAb"]
 				} else if v == "bool" {
 					retOutVars[k] = abDef["bool"]
 				} else {
@@ -333,7 +373,7 @@ func (api API) GetFormatDepVars(depOutVars map[string]string) (retOutVars map[st
 				} else if v == "string" {
 					retOutVars[k] = abDef["strNor"]
 				} else if v == "array" {
-					retOutVars[k] = abDef["objAb"]
+					retOutVars[k] = abDef["arrNor"]
 				} else if v == "bool" {
 					retOutVars[k] = abDef["bool"]
 				} else {
@@ -360,7 +400,10 @@ func (apiCase APICase) GetDepVars() (depOutVars map[string]string, err error) {
 		depCases = append(depCases, bcs...)
 	}
 	depCases = append(depCases, apiCase.CaseID)
-	LogHandle.Printf("DepCases: %q", depCases)
+	if len(depCases) > 1 {
+		LogHandle.Printf("DepCases: %q", depCases)
+	}
+
 	var testResult ApiTestResult
 	var comVar ComVar
 	for _, dep := range depCases {
@@ -380,7 +423,7 @@ func (apiCase APICase) GetDepVars() (depOutVars map[string]string, err error) {
 	for _, dep := range depCases {
 		models.Orm.Table("common_variable").Where("project = ? and name = ?", apiCase.Project, dep).Find(&comVar)
 		if len(comVar.Value) > 0 {
-			LogHandle.Printf("comVar: %q", comVar)
+			// LogHandle.Printf("comVar: %q", comVar)
 			err = json.Unmarshal([]byte(comVar.Value), &depOutVars)
 			if err != nil {
 				LogHandle.Printf("Error: %q", err)
@@ -389,7 +432,11 @@ func (apiCase APICase) GetDepVars() (depOutVars map[string]string, err error) {
 		}
 
 	}
-	LogHandle.Printf("DepOutVars: %q", depOutVars)
+
+	if len(depOutVars) > 0 {
+		LogHandle.Printf("DepOutVars: %q", depOutVars)
+	}
+
 	return
 }
 
@@ -516,7 +563,9 @@ func (api API) GetQuery(depOutVars map[string]string) (querys []string, err erro
 
 	}
 
-	LogHandle.Printf("Querys: %q", querys)
+	if len(querys) > 0 {
+		LogHandle.Printf("Querys: %q", querys)
+	}
 
 	return
 }
@@ -532,7 +581,6 @@ func (api API) GetBody(depOutVars map[string]string) (bodys []map[string]interfa
 		return
 	}
 
-	LogHandle.Printf("mapBody: %+v", mapBody)
 	var bKeys []string
 	var multiVars []string
 	for k := range mapBody {
@@ -540,41 +588,48 @@ func (api API) GetBody(depOutVars map[string]string) (bodys []map[string]interfa
 	}
 	var intValue int
 	var boolValue bool
+
 	for _, v := range bKeys {
 		if value, ok := depOutVars[v]; ok {
-			if !strings.Contains(value, ",") {
-				if mapBody[v] == "int" || mapBody[v] == "integer" {
-					intValue, err = strconv.Atoi(value)
-					if err != nil {
-						return
-					}
-					mapBody[v] = intValue
-				} else if mapBody[v] == "array" {
-					intValue, err = strconv.Atoi(value)
-					// LogHandle.Printf("intValue: %+v", intValue)
+			if mapBody[v] == "array" {
+				strList := strings.Split(value, ",")
+				var intList []int
+				for _, sv := range strList {
+					intValue, err := strconv.Atoi(sv)
 					if err == nil {
-						var tmpInt []int
-						tmpInt = append(tmpInt, intValue)
-						mapBody[v] = tmpInt
-					} else {
-						var tmpStr []string
-						tmpStr = append(tmpStr, value)
-						mapBody[v] = tmpStr
+						intList = append(intList, intValue)
 					}
-				} else if mapBody[v] == "boolean" || mapBody[v] == "bool" {
-					boolValue, err = strconv.ParseBool(value)
-					mapBody[v] = boolValue
+				}
+				if len(intList) > 0 {
+					mapBody[v] = intList
 				} else {
-					mapBody[v] = value
+					mapBody[v] = strList
 				}
 			} else {
-				multiVars = append(multiVars, v)
+				if strings.Contains(value, ",") {
+					multiVars = append(multiVars, v)
+				} else {
+					if mapBody[v] == "int" || mapBody[v] == "integer" {
+						intValue, err = strconv.Atoi(value)
+						if err != nil {
+							return
+						}
+						mapBody[v] = intValue
+					} else if mapBody[v] == "boolean" || mapBody[v] == "bool" {
+						boolValue, err = strconv.ParseBool(value)
+						if err != nil {
+							return
+						}
+						mapBody[v] = boolValue
+					} else {
+						mapBody[v] = value
+					}
+				}
 			}
 		} else {
 			err = fmt.Errorf("Get Body: Not Found [%q] value in DepOutVars", v)
 			return
 		}
-
 	}
 
 	if len(multiVars) == 0 {
@@ -586,30 +641,24 @@ func (api API) GetBody(depOutVars map[string]string) (bodys []map[string]interfa
 	for _, v := range multiVars {
 		strList := strings.Split(depOutVars[v], ",")
 		for _, sv := range strList {
-			var intValue int
-			if mapBody[v] == "int" || mapBody[v] == "integer" {
-				intValue, err = strconv.Atoi(sv)
-				if err != nil {
-					return
-				}
-				mapBody[v] = intValue
-			} else if mapBody[v] == "array" {
-				intValue, err = strconv.Atoi(sv)
-				if err == nil {
-					var tmpInt []int
-					tmpInt = append(tmpInt, intValue)
-					mapBody[v] = tmpInt
-				} else {
-					var tmpStr []string
-					tmpStr = append(tmpStr, sv)
-					mapBody[v] = tmpStr
-				}
-			} else {
-				mapBody[v] = sv
+			var body map[string]interface{}
+			body = make(map[string]interface{})
+			for mk, mv := range mapBody {
+				body[mk] = mv
 			}
-
-			bodys = append(bodys, mapBody)
-
+			if mapBody[v] == "int" || mapBody[v] == "integer" {
+				intValue, err := strconv.Atoi(sv)
+				if err != nil {
+					LogHandle.Printf("Error: %q\n", err)
+				}
+				body[v] = intValue
+			} else if mapBody[v] == "boolean" || mapBody[v] == "bool" {
+				boolValue, err = strconv.ParseBool(sv)
+				body[v] = boolValue
+			} else {
+				body[v] = sv
+			}
+			bodys = append(bodys, body)
 		}
 	}
 
@@ -618,9 +667,10 @@ func (api API) GetBody(depOutVars map[string]string) (bodys []map[string]interfa
 }
 
 func (apiCase APICase) RunBeforeCase() (err error) {
-	LogHandle.Printf("BeforeCase: %q\n", apiCase.BeforeCase)
 	if len(apiCase.BeforeCase) == 0 {
 		return
+	} else {
+		LogHandle.Printf("BeforeCase: %q\n", apiCase.BeforeCase)
 	}
 	var depCases []string
 	var api API
@@ -647,7 +697,7 @@ func (apiCase APICase) RunAfterCase() (err error) {
 		return
 	}
 	var afterCases []string
-	var api API
+	var chkApi, delApi API
 	afterCases = strings.Split(apiCase.AfterCase, ",")
 	var chkId, delId string
 	for _, v := range afterCases {
@@ -658,28 +708,28 @@ func (apiCase APICase) RunAfterCase() (err error) {
 		}
 	}
 	if len(chkId) > 0 {
-		models.Orm.Table("api_detail").Where("case_id = ?", chkId).Find(&api)
-		LogHandle.Printf("api: %q\n", api)
-		if len(api.CaseID) == 0 {
+		models.Orm.Table("api_detail").Where("case_id = ?", chkId).Find(&chkApi)
+		// LogHandle.Printf("chk api: %q\n", chkApi)
+		if len(chkApi.CaseID) == 0 {
 			err = fmt.Errorf("Not Found API Case: [%s] info", chkId)
 			LogHandle.Printf("Error: %s", err)
 			return
 		}
-		err = RunAPI(api.Id, "yes")
+		err = RunAPI(chkApi.Id, "chk")
 		if err != nil {
 			return
 		}
 	}
 
 	if len(delId) > 0 {
-		models.Orm.Table("api_detail").Where("case_id = ?", delId).Find(&api)
-		LogHandle.Printf("api: %q\n", api)
-		if len(api.CaseID) == 0 {
+		models.Orm.Table("api_detail").Where("case_id = ?", delId).Find(&delApi)
+		// LogHandle.Printf("del api: %q\n", delApi)
+		if len(delApi.CaseID) == 0 {
 			err = fmt.Errorf("Not Found API Case: [%s] info", delId)
 			LogHandle.Printf("Error: %s", err)
 			return
 		}
-		err = RunAPI(api.Id, "yes")
+		err = RunAPI(delApi.Id, "yes")
 		if err != nil {
 			return
 		}
@@ -688,11 +738,13 @@ func (apiCase APICase) RunAfterCase() (err error) {
 	return
 }
 
-func (api API) Run(url string, data map[string]interface{}) (response Response, err error) {
-	client := &http.Client{}
+func (api API) Run(url string, data map[string]interface{}) (resRaw map[string]interface{}, err error) {
+
 	var req *http.Request
-	// LogHandle.Printf("Raw Data: %v", data)
+	LogHandle.Printf("Raw Data: %+v", data)
+	i := 0
 	for k, _ := range data {
+		i++
 		if ChkUniVar(k, api.Project) {
 			var host Host
 			models.Orm.Table("host").Where("project = ?", api.Project).Find(&host)
@@ -704,11 +756,19 @@ func (api API) Run(url string, data map[string]interface{}) (response Response, 
 				data[k] = GetRandomStr(65)
 			}
 
+			if i == len(data) {
+				LogHandle.Printf("After Data: %+v", data)
+			}
+
 		}
 	}
-	LogHandle.Printf("After Data: %v", data)
 	reader, err := json.Marshal(data)
 	dest := bytes.NewReader(reader)
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
 
 	switch api.HttpMethod {
 	case "get":
@@ -739,18 +799,20 @@ func (api API) Run(url string, data map[string]interface{}) (response Response, 
 		return
 	}
 
-	body, _ := ioutil.ReadAll(resp.Body)
-	LogHandle.Printf("response: %s", string(body))
-
-	if response.Content == nil {
-		response.Content = make(map[string]interface{})
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		LogHandle.Printf("Error: %s", err)
 	}
-	if response.ResultObject == nil {
-		response.ResultObject = make(map[string]interface{})
-	}
-	err = json.Unmarshal(body, &response)
-	LogHandle.Printf("response: %+v", response)
 
+	LogHandle.Printf("response str: %s", string(body))
+	resRaw = make(map[string]interface{})
+	err = json.Unmarshal(body, &resRaw)
+	if err != nil {
+		LogHandle.Printf("Error: %s", err)
+	}
+	if string(body) == "404 page not found" {
+		return
+	}
 	return
 }
 
@@ -766,9 +828,9 @@ func (apiCase APICase) IsThread() (b bool) {
 func (apiCase APICase) RunThread(api API, urls, querys []string, bodys []map[string]interface{}) (err error) {
 	wg := sync.WaitGroup{}
 	i := 0
-	var tmpMap map[string]interface{}
+	var tmpMap, response map[string]interface{}
 	tmpMap = make(map[string]interface{})
-	var response Response
+	response = make(map[string]interface{})
 	if apiCase.RunNum == 1 {
 		for _, url := range urls {
 			if api.HttpMethod == "get" && len(querys) == 0 {
@@ -806,7 +868,6 @@ func (apiCase APICase) RunThread(api API, urls, querys []string, bodys []map[str
 					i++
 					go func(inVar int, inBody map[string]interface{}) {
 						LogHandle.Printf("RunTimes: %d", inVar)
-						LogHandle.Printf("body: %+v", inBody)
 						response, err = api.Run(url, inBody)
 						if err != nil {
 							LogHandle.Printf("Error: %s", err)
@@ -919,7 +980,8 @@ func (apiCase APICase) RunThread(api API, urls, querys []string, bodys []map[str
 
 func RunApiCase(id, depMode string) (err error) {
 	var apiCase APICase
-	var response Response
+	var response map[string]interface{}
+	response = make(map[string]interface{})
 	s, _ := strconv.Atoi(id)
 	models.Orm.Table("api_case").Where("id = ?", s).Find(&apiCase)
 	LogHandle.Printf("apiCase: %q\n", apiCase)
@@ -1009,8 +1071,12 @@ func RunApiCase(id, depMode string) (err error) {
 
 	}
 
-	if err != nil || response.Status == "failure" {
-		return
+	if err != nil {
+		if value, ok := response["status"]; ok {
+			if value.(string) == "failure" {
+				return
+			}
+		}
 	}
 
 	if depMode != "yes" {
@@ -1025,7 +1091,8 @@ func RunApiCase(id, depMode string) (err error) {
 
 func RunAPI(id, depMode string) (err error) {
 	var api API
-	var response Response
+	var response map[string]interface{}
+	response = make(map[string]interface{})
 	s, _ := strconv.Atoi(id)
 	models.Orm.Table("api_detail").Where("id = ?", s).Find(&api)
 	LogHandle.Printf("api: %q\n", api)
@@ -1048,7 +1115,8 @@ func RunAPI(id, depMode string) (err error) {
 		LogHandle.Printf("Error: %s", err)
 		return
 	}
-	if depMode != "yes" {
+
+	if depMode != "yes" && depMode != "chk" {
 		err = apiCase.RunBeforeCase()
 		if err != nil {
 			LogHandle.Printf("Error: %s", err)
@@ -1094,6 +1162,40 @@ func RunAPI(id, depMode string) (err error) {
 				if err != nil {
 					LogHandle.Printf("Error: %s", err)
 				}
+				apiCase.SaveTestResult(nil, response)
+				apiCase.SaveDetailResult(url, api.ApiFunction, nil, response)
+				if depMode == "chk" {
+					var dKeys []string
+					for k := range depOutVars {
+						dKeys = append(dKeys, k)
+					}
+					i := 0
+					content := response["content"].(map[string]interface{})
+					LogHandle.Printf("%-8s\t%-8s\t%-8s\t%-8s\n", "Name", "Expected", "Actual", "Result")
+					for _, v := range dKeys {
+						if ChkUniVar(v, apiCase.Project) {
+							continue
+						}
+						var chkResult string
+						if value, ok := content[v]; ok {
+							targetType := fmt.Sprintf("%T", value)
+							if targetType == "float64" {
+								value = strconv.FormatFloat(value.(float64), 'f', -1, 64)
+							}
+							if depOutVars[v] != value {
+								chkResult = "fail"
+								i++
+							} else {
+								chkResult = "pass"
+							}
+							LogHandle.Printf("%-8s\t%-8s\t%-8s\t%-8s\n", v, depOutVars[v], value, chkResult)
+						}
+					}
+					if i > 0 {
+						err = fmt.Errorf("API[%s] CHECK info fail", api.CaseID)
+						return
+					}
+				}
 			} else {
 				for _, query := range querys {
 					tmpMap["query"] = query
@@ -1103,11 +1205,28 @@ func RunAPI(id, depMode string) (err error) {
 					}
 					apiCase.SaveTestResult(tmpMap, response)
 					apiCase.SaveDetailResult(url, api.ApiFunction, tmpMap, response)
+					// if depMode == "chk" {
+					// 	i := 0
+					// 	LogHandle.Printf("response.Content %s", response.Content)
+					// 	for k, v := range response.Content {
+					// 		var chkResult string
+					// 		if depOutVars[k] != v {
+					// 			chkResult = "fail"
+					// 			i++
+					// 		} else {
+					// 			chkResult = "pass"
+					// 		}
+					// 		LogHandle.Printf("Expected: %s, Actual: %s, Result: %s", depOutVars[k], v, chkResult)
+					// 	}
+					// 	if i > 0 {
+					// 		err = fmt.Errorf("API[%s] check response info fail", api.CaseID)
+					// 		return
+					// 	}
+					// }
 				}
 			}
 		} else {
 			for _, body := range bodys {
-				LogHandle.Printf("body: %+v", body)
 				response, err = api.Run(url, body)
 				if err != nil {
 					LogHandle.Printf("Error: %s", err)
@@ -1118,11 +1237,15 @@ func RunAPI(id, depMode string) (err error) {
 		}
 	}
 
-	if err != nil || response.Status == "failure" {
-		return
+	if err != nil {
+		if value, ok := response["status"]; ok {
+			if value.(string) == "failure" {
+				return
+			}
+		}
 	}
 
-	if depMode != "yes" {
+	if depMode != "yes" && depMode != "chk" {
 		err = apiCase.RunAfterCase()
 		if err != nil {
 			LogHandle.Printf("Error: %s", err)
@@ -1159,8 +1282,8 @@ func RunAgain(id string) (err error) {
 		LogHandle.Printf("Error: %s", err)
 		return
 	}
-	var response Response
-	var data map[string]interface{}
+	var data, response map[string]interface{}
+	response = make(map[string]interface{})
 	if err = json.Unmarshal([]byte(apiTestDetail.Body), &data); err != nil {
 		LogHandle.Printf("Error: %s", err)
 		return
@@ -1199,8 +1322,8 @@ func RunData(id string) (err error) {
 		LogHandle.Printf("Error: %s", err)
 		return
 	}
-	var response Response
-	var data map[string]interface{}
+	var data, response map[string]interface{}
+	response = make(map[string]interface{})
 	if len(apiTestData.Body) > 0 {
 		if err = json.Unmarshal([]byte(apiTestData.Body), &data); err != nil {
 			LogHandle.Printf("Error: %s", err)
@@ -1220,15 +1343,20 @@ func RunData(id string) (err error) {
 		url = rawUrl
 	}
 	response, err = api.Run(url, data)
-
-	if response.Status == apiTestData.ExpectedResult {
-		apiTestData.Result = "pass"
-		apiTestData.Response = response.Message
+	if err != nil {
+		return
+	}
+	if value, ok := response["status"]; ok {
+		apiTestData.ActualResult = value.(string)
+		if value.(string) == apiTestData.ExpectedResult {
+			apiTestData.Result = "pass"
+			apiTestData.Response = response["message"].(string)
+		}
 	} else {
 		apiTestData.Result = "fail"
-		apiTestData.FailReason = response.Message
+		apiTestData.FailReason = response["message"].(string)
 	}
-	apiTestData.ActualResult = response.Status
+
 	apiTestData.Module = apiCase.Module
 	apiTestData.ApiFunction = api.ApiFunction
 
@@ -1239,5 +1367,108 @@ func RunData(id string) (err error) {
 	if err != nil {
 		LogHandle.Printf("Error: %s", err)
 	}
+	return
+}
+
+func RunRandom(id string) (err error) {
+	var testcase TestCase
+	s, _ := strconv.Atoi(id)
+	models.Orm.Table("test_case").Where("id = ?", s).Find(&testcase)
+	// LogHandle.Printf("testcase: %q\n", testcase)
+	if len(testcase.CaseID) == 0 {
+		err = fmt.Errorf("请先关联API，再进行测试")
+		LogHandle.Printf("Error: %s", err)
+		return
+	}
+
+	var api API
+	models.Orm.Table("api_detail").Where("case_id = ?", testcase.CaseID).Find(&api)
+	// LogHandle.Printf("api: %q\n", api)
+	if len(api.CaseID) == 0 {
+		err = fmt.Errorf("Not Found API[%s] Test Data", testcase.CaseID)
+		LogHandle.Printf("Error: %s", err)
+		return
+	}
+
+	err = RunAPI(api.Id, "")
+
+	if err != nil {
+		testcase.TestResult = "fail"
+	} else {
+		testcase.TestResult = "pass"
+	}
+
+	curTime := time.Now()
+	testcase.UpdatedAt = curTime.Format(baseFormat)
+	testcase.CaseExecutor = "Robot"
+	// LogHandle.Printf("testcase: %s", testcase)
+	_ = models.Orm.Table("test_case").Where("id = ?", s).Update(testcase).Error
+
+	if err != nil {
+		LogHandle.Printf("Error: %s", err)
+	}
+
+	return
+}
+
+func RunRegress(id string) (err error) {
+	var testcase TestCase
+	s, _ := strconv.Atoi(id)
+	models.Orm.Table("test_case").Where("id = ?", s).Find(&testcase)
+	// LogHandle.Printf("testcase: %q\n", testcase)
+	if len(testcase.CaseID) == 0 {
+		err = fmt.Errorf("请先关联API，再进行测试")
+		LogHandle.Printf("Error: %s", err)
+		return
+	}
+
+	var apiTestDatas []ApiTestData
+	models.Orm.Table("api_test_data").Where("case_id = ?", testcase.CaseID).Find(&apiTestDatas)
+	// LogHandle.Printf("apiCase: %q\n", apiCase)
+	if len(apiTestDatas) == 0 {
+		err = fmt.Errorf("Not Found API[%s] Test Data", testcase.CaseID)
+		LogHandle.Printf("Error: %s", err)
+		return
+	}
+	tag := 1
+	var errStr string
+	for _, item := range apiTestDatas {
+		id := strconv.Itoa(item.Id)
+		err = RunData(id)
+		if err != nil {
+			errStr = errStr + fmt.Sprintf("%s", err)
+			tag = 0
+		}
+	}
+
+	if len(errStr) > 0 {
+		LogHandle.Printf("Error: %s", errStr)
+	}
+
+	if tag == 0 {
+		testcase.TestResult = "fail"
+		err = fmt.Errorf("%s", errStr)
+	} else {
+		testcase.TestResult = "pass"
+	}
+
+	var afterTests []ApiTestData
+	models.Orm.Table("api_test_data").Where("case_id = ?", testcase.CaseID).Find(&afterTests)
+	for _, item := range afterTests {
+		if item.Result == "fail" {
+			testcase.TestResult = "fail"
+		}
+	}
+
+	curTime := time.Now()
+	testcase.UpdatedAt = curTime.Format(baseFormat)
+	testcase.CaseExecutor = "Robot"
+	// LogHandle.Printf("testcase: %s", testcase)
+	_ = models.Orm.Table("test_case").Where("id = ?", s).Update(testcase).Error
+
+	if err != nil {
+		LogHandle.Printf("Error: %s", err)
+	}
+
 	return
 }

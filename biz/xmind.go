@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testmgmt/models"
+	"time"
 )
 
 type TestCase struct {
@@ -20,12 +21,14 @@ type TestCase struct {
 	TestSteps    string `gorm:"column:test_steps" json:"test_steps"`
 	ExpectResult string `gorm:"column:expect_result" json:"expect_result"`
 	Auto         string `gorm:"column:auto" json:"auto"`
+	CaseID       string `gorm:"column:case_id" json:"case_id"`
 	// FunDeveloper string `gorm:"column:fun_developer" json:"fun_developer"`
 	// CaseDesigner string `gorm:"column:case_designer" json:"case_designer"`
-	// CaseExecutor string `gorm:"column:case_executor" json:"case_executor"`
+	CaseExecutor string `gorm:"column:case_executor" json:"case_executor"`
 	// TestTime     string `gorm:"column:test_time" json:"test_time"`
 	TestResult string `gorm:"column:test_result" json:"test_result"`
 	Module     string `gorm:"column:module" json:"module"`
+	UpdatedAt  string `gorm:"column:updated_at" json:"updated_at"`
 	// CaseId       string `gorm:"column:case_id" json:"case_id"`
 	Project string `gorm:"column:project" json:"project"`
 	// Remark       string `gorm:"column:remark" json:"remark"`
@@ -59,25 +62,30 @@ func GetFileName(dirName, project string) (fileName string, err error) {
 	if err != nil {
 		LogHandle.Printf("Error: %s", err)
 	}
-	LogHandle.Printf("project: %v", project)
+	var allNames []string
 	for _, file := range files {
 		tmpName := file.Name()
-		if strings.HasPrefix(tmpName, project) {
-			fileName = dirName + "/" + tmpName
-			break
+		if strings.HasPrefix(tmpName, project) && strings.HasSuffix(tmpName, ".xmind") {
+			rawName := dirName + "/" + tmpName
+			allNames = append(allNames, rawName)
 		}
+	}
+
+	if len(allNames) > 0 {
+		// LogHandle.Printf("allFileNames: %s", allNames)
+		fileName = allNames[len(allNames)-1]
 	}
 
 	if len(fileName) == 0 {
 		err = fmt.Errorf("Not Found file [%s*.xmind] in directory[%s]", project, dirName)
 		LogHandle.Printf("err: %v", err)
 	}
-
+	LogHandle.Printf("xmindFileName: %s", fileName)
 	return
 }
 
 func GetJSON(id string) (err error) {
-	StatusDef := map[int]string{1: "草稿", 2: "待评审", 3: "评审中", 4: "重做", 5: "废弃", 6: "feature", 7: "终稿"}
+	StatusDef := map[int]string{1: "草稿", 2: "待评审", 3: "评审中", 4: "重做", 5: "废弃", 6: "特性", 7: "终稿"}
 	PriorityDef := map[int]string{1: "高", 2: "中", 3: "低"}
 	AutoDef := map[int]string{1: "否", 2: "是"}
 	TestTypeDef := map[int]string{1: "功能测试", 2: "异常测试", 3: "场景测试"}
@@ -88,20 +96,28 @@ func GetJSON(id string) (err error) {
 		return
 	}
 	project := host.Project
-
-	fileName, err := GetFileName("/tmp/test", project)
+	basePath := fmt.Sprintf("%s/testmgmt/test", BATHPATH)
+	fileName, err := GetFileName(basePath, project)
 	if err != nil {
 		LogHandle.Printf("Error: %s", err)
 		return
 	}
 
-	output, err := exec.Command("/tmp/test/xmind2testcase", fileName, "-json").Output()
+	var ms string
+	if strings.Contains(fileName, "_v") || strings.Contains(fileName, "_V") {
+		items := strings.Split(fileName, "_")
+		tmpName := items[1]
+		ms = strings.Replace(tmpName, ".xmind", "", -1)
+	}
+
+	output, err := exec.Command("xmind2testcase", fileName, "-json").Output()
 	if err != nil {
 		LogHandle.Printf("output: %s", output)
 		LogHandle.Printf("Error: %s", err)
 	}
 
 	jsonFileName := fileName[:len(fileName)-len(".xmind")] + ".json"
+	LogHandle.Printf("jsonFileName: %s", jsonFileName)
 	content, err := ioutil.ReadFile(jsonFileName)
 	if err != nil {
 		return
@@ -135,10 +151,20 @@ func GetJSON(id string) (err error) {
 		testcase.ExpectResult = resultStr
 		if len(modules) > 1 {
 			testcase.Module = modules[0]
-			caseNumberPrefix = modules[1]
+			if len(ms) > 0 {
+				caseNumberPrefix = modules[1] + "_" + ms
+			} else {
+				caseNumberPrefix = modules[1]
+			}
+
 		} else {
 			testcase.CaseName = item.Name
-			caseNumberPrefix = item.Product + "_" + "other"
+			if len(ms) > 0 {
+				caseNumberPrefix = item.Product + "_" + ms
+			} else {
+				caseNumberPrefix = item.Product + "_" + "other"
+			}
+
 		}
 
 		chkStr := "%" + caseNumberPrefix + "%"
@@ -156,7 +182,9 @@ func GetJSON(id string) (err error) {
 		}
 
 		testcase.CaseNumber = caseNumberPrefix + "_" + sufixNum
-		LogHandle.Printf("testcase: %+v", testcase)
+		// LogHandle.Printf("testcase: %+v", testcase)
+		curTime := time.Now()
+		testcase.UpdatedAt = curTime.Format(baseFormat)
 		models.Orm.Table("test_case").Where("project = ? and case_number = ?", project, testcase.CaseNumber).Find(&testCaseDb2)
 		if len(testCaseDb2.CaseNumber) == 0 {
 			err = models.Orm.Table("test_case").Create(testcase).Error

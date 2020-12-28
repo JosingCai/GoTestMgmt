@@ -13,9 +13,10 @@ func GetTestProgressScheduleTable(ctx *context.Context) table.Table {
 	testProgressSchedule := table.NewDefaultTable(table.DefaultConfigWithDriver("mysql"))
 
 	info := testProgressSchedule.GetInfo().HideFilterArea().SetFilterFormLayout(form.LayoutThreeCol)
-
+	info.SetFilterFormHeadWidth(4)
+	info.SetFilterFormInputWidth(8)
 	info.AddField("Id", "id", db.Int).
-		FieldFilterable()
+		FieldHide()
 	info.AddField("任务名称", "task_id", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("计划开始时间", "p_start_time", db.Datetime)
 	info.AddField("计划结束时间", "p_finish_time", db.Datetime)

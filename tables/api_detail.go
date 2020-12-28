@@ -19,23 +19,25 @@ func GetApiDetailTable(ctx *context.Context) table.Table {
 	apiDetail := table.NewDefaultTable(table.DefaultConfigWithDriver("mysql"))
 
 	info := apiDetail.GetInfo().HideFilterArea().SetFilterFormLayout(form.LayoutThreeCol)
-
+	info.SetFilterFormHeadWidth(4)
+	info.SetFilterFormInputWidth(8)
 	info.AddField("ID", "id", db.Int).
 		FieldHide()
-	info.AddField("用例ID", "case_id", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
-	info.AddField("所属模块", "module", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
-	info.AddField("功能描述", "apiFunction", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
-	info.AddField("方法", "httpMethod", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
-	info.AddField("路径", "path", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
-	info.AddField("Header", "header", db.Longtext)
-	info.AddField("Path变量", "pathVariable", db.Longtext)
-	info.AddField("Query变量", "queryParameter", db.Longtext)
-	info.AddField("Body", "body", db.Longtext)
-	info.AddField("Response", "response", db.Longtext)
-	info.AddField("关联项目", "project", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
+	info.AddField("用例ID", "case_id", db.Varchar).FieldWidth(150).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
+	info.AddField("所属模块", "module", db.Varchar).FieldWidth(150).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
+	info.AddField("功能描述", "apiFunction", db.Varchar).FieldWidth(150).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
+	info.AddField("方法", "httpMethod", db.Varchar).FieldWidth(80).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
+	info.AddField("路径", "path", db.Varchar).FieldWidth(150).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
+	info.AddField("Header", "header", db.Longtext).FieldWidth(150)
+	info.AddField("Path变量", "pathVariable", db.Longtext).FieldWidth(150)
+	info.AddField("Query变量", "queryParameter", db.Longtext).FieldWidth(150)
+	info.AddField("Body", "body", db.Longtext).FieldWidth(300)
+	info.AddField("Response", "response", db.Longtext).FieldWidth(300)
+	info.AddField("关联项目", "project", db.Varchar).FieldWidth(120).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("创建时间", "created_at", db.Timestamp).
-		FieldSortable()
-	info.AddField("更新时间", "updated_at", db.Timestamp)
+		FieldSortable().FieldWidth(120)
+	info.AddField("更新时间", "updated_at", db.Timestamp).
+		FieldHide()
 	info.AddField("删除时间", "deleted_at", db.Timestamp).
 		FieldHide()
 
@@ -66,6 +68,28 @@ func GetApiDetailTable(ctx *context.Context) table.Table {
 			}
 			return true, status, ""
 		}))
+
+	info.AddSelectBox("关联项目", types.FieldOptions{
+		{Value: "BOOT3X", Text: "BOOT3X"},
+		{Value: "POWER", Text: "POWER"},
+		{Value: "REPORT", Text: "REPORT"},
+		{Value: "ACT2", Text: "ACT2"},
+		{Value: "FLOW", Text: "FLOW"},
+		{Value: "PORTAL", Text: "PORTAL"},
+		{Value: "CmpSaas", Text: "CmpSaas"},
+		{Value: "Catalog", Text: "Catalog"},
+		{Value: "Discovery", Text: "Discovery"},
+		{Value: "YDDUC", Text: "YDDUC"},
+		{Value: "XMDB", Text: "XMDB"},
+		{Value: "CmpCore", Text: "CmpCore"},
+	}, action.FieldFilter("project"))
+
+	info.AddSelectBox("请求方法", types.FieldOptions{
+		{Value: "get", Text: "get"},
+		{Value: "post", Text: "post"},
+		{Value: "delete", Text: "delete"},
+		{Value: "put", Text: "put"},
+	}, action.FieldFilter("httpMethod"))
 
 	info.SetTable("api_detail").SetTitle("API详情").SetDescription("API详情")
 

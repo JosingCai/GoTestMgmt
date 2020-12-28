@@ -19,8 +19,10 @@ func GetIssueTable(ctx *context.Context) table.Table {
 	issue := table.NewDefaultTable(table.DefaultConfigWithDriver("mysql"))
 
 	info := issue.GetInfo().HideFilterArea().SetFilterFormLayout(form.LayoutThreeCol)
-
-	info.AddField("Id", "id", db.Int)
+	info.SetFilterFormHeadWidth(4)
+	info.SetFilterFormInputWidth(8)
+	info.AddField("Id", "id", db.Int).
+		FieldHide()
 	info.AddField("产品", "product", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("版本分支", "milestone", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
 	info.AddField("No.", "issue_id", db.Varchar).FieldFilterable(types.FilterType{Operator: types.FilterOperatorLike})
