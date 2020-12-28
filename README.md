@@ -7,18 +7,24 @@
 #### 导入SQL
 - doc/sql/init.sql
 
-#### 更新配置文件
-- adm.ini
-- config.json
-
 #### 文件管理
-- 文件保存在/tmp目录
+- 文件保存在一个目录下，e.g:/tmp
 - 执行命令创建子目录：
   - mkdir -p /tmp/testmgmt/{api,test,file,log}
 
+#### 更新配置文件
+- adm.ini
+- config.json
+  - file_base_path 项内容设置为文件保存的目录
+  
 #### 开启服务
+##### 开发环境：
 - 命令：go run main.go
 - 访问：http://localhost:9033
+
+##### 生产环境
+- linux环境：GOOS=linux GOARCH=amd64 go build -o testmgmt main.go 
+- 部署：nohup ./testmgmt &
 
 #### 登录
  - 默认用户：admin/ admin

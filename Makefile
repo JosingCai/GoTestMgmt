@@ -2,7 +2,7 @@ GOCMD = go
 GOBUILD = $(GOCMD) build
 GOMOD = $(GOCMD) mod
 GOTEST = $(GOCMD) test
-BINARY_NAME = goadmin
+BINARY_NAME = testmgmt
 CLI = adm
 
 all: serve
