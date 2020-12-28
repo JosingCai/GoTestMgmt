@@ -3,7 +3,7 @@ import os
 import argparse
 import sys
 
-DEFAULT_HOST = "127.0.0.1:8088"
+DEFAULT_HOST = "127.0.0.1:9033"
 
 
 def login(host, user, pwd):
