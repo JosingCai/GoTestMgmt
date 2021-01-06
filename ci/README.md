@@ -12,4 +12,4 @@ optional arguments:
   --password PWD       password for username, default: admin
   --project PROJECT    Input project name for smoke test
   --debug DEBUG        [Y/N] Y as Yes, N as Not, default: N
-
+```
