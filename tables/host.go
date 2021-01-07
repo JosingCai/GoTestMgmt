@@ -299,6 +299,9 @@ func GetHostTable(ctx *context.Context) table.Table {
 			return true, status, ""
 		}))
 
+	projects := biz.GetProjects()
+	info.AddSelectBox("关联项目", projects, action.FieldFilter("project"))
+
 	info.SetTable("host").SetTitle("测试主机").SetDescription("测试主机")
 
 	formList := host.GetForm()

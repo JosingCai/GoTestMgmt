@@ -39,5 +39,6 @@
 	"bootstrap_file_path": "testmgmt/bootstrap.go",
 	"go_mod_file_path": "testmgmt/go.mod",
 	"asset_root_path": "./public/",
-	"file_base_path": "/tmp"
+	"file_base_path": "/tmp",
+	"server_port": 9033
 }
