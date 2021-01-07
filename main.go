@@ -2,12 +2,15 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
+
+	"github.com/gin-contrib/pprof"
 
 	_ "github.com/GoAdminGroup/go-admin/adapter/gin" // web framework adapter
 	ada "github.com/GoAdminGroup/go-admin/adapter/gin"
@@ -39,6 +42,7 @@ func startServer() {
 	gin.DefaultWriter = ioutil.Discard
 
 	r := gin.Default()
+	pprof.Register(r)
 
 	template.AddComp(chartjs.NewChart())
 
@@ -79,8 +83,8 @@ func startServer() {
 	})
 
 	models.Init(eng.MysqlConnection())
-
-	_ = r.Run(":9033")
+	listen := fmt.Sprintf(":%d", biz.SERVER_PORT)
+	_ = r.Run(listen)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
