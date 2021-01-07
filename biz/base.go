@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	BASEPATH string
+	BASEPATH    string
+	SERVER_PORT int
 )
 
 type Project struct {
@@ -20,6 +21,7 @@ type Project struct {
 
 type Config struct {
 	FileBasePath string `json:"file_base_path"`
+	ServerPort   int    `json:"server_port"`
 }
 
 func GetProjects() (projects []types.FieldOption) {
@@ -54,6 +56,7 @@ func init() {
 	}
 
 	BASEPATH = config.FileBasePath
+	SERVER_PORT = config.ServerPort
 	_, err = os.Stat(BASEPATH)
 	if err != nil {
 		if os.IsNotExist(err) {
