@@ -1,6 +1,8 @@
 package tables
 
 import (
+	"testmgmt/biz"
+
 	"github.com/GoAdminGroup/go-admin/context"
 	"github.com/GoAdminGroup/go-admin/modules/db"
 	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
@@ -91,7 +93,8 @@ func GetProductGitlabTable(ctx *context.Context) table.Table {
 
 			return true, status, ""
 		}))
-
+	projects := biz.GetProjects()
+	info.AddSelectBox("关联项目", projects, action.FieldFilter("project"))
 	info.SetTable("product_gitlab").SetTitle("Gitlab列表").SetDescription("Gitlab列表")
 
 	formList := productGitlab.GetForm()

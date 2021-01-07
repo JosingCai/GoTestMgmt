@@ -96,7 +96,7 @@ func GetJSON(id string) (err error) {
 		return
 	}
 	project := host.Project
-	basePath := fmt.Sprintf("%s/testmgmt/test", BATHPATH)
+	basePath := fmt.Sprintf("%s/testmgmt/test", BASEPATH)
 	fileName, err := GetFileName(basePath, project)
 	if err != nil {
 		LogHandle.Printf("Error: %s", err)

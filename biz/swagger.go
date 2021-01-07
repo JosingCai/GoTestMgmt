@@ -11,14 +11,6 @@ import (
 	"testmgmt/models"
 )
 
-var (
-	BATHPATH string
-)
-
-type Config struct {
-	FileBasePath string `json:"file_base_path"`
-}
-
 type Swagger struct {
 	Paths       map[string]PathDef   `json:"paths"`
 	Definitions map[string]DefiniDef `json:"definitions"`
@@ -276,7 +268,7 @@ func GetSwagger(id string) (err error) {
 		return
 	}
 	project := host.Project
-	fileName := fmt.Sprintf("%s/testmgmt/api/%s.json", BATHPATH, project)
+	fileName := fmt.Sprintf("%s/testmgmt/api/%s.json", BASEPATH, project)
 	content, err := ioutil.ReadFile(fileName)
 	// LogHandle.Printf("content: %s", content)
 	if err != nil {
@@ -310,25 +302,5 @@ func GetSwagger(id string) (err error) {
 	}
 
 	return
-
-}
-
-func init() {
-	content, err := ioutil.ReadFile("./config.json")
-	if err != nil {
-		info := fmt.Sprintf("Init Config Failed: %s", err)
-		panic(info)
-	}
-	var config Config
-	err = json.Unmarshal([]byte(content), &config)
-	if err != nil {
-		info := fmt.Sprintf("Init Config Failed: %s", err)
-		panic(info)
-	}
-	if len(config.FileBasePath) == 0 {
-		panic("Not Found file_base_path")
-	}
-
-	BATHPATH = config.FileBasePath
 
 }

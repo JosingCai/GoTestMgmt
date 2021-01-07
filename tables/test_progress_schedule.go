@@ -1,10 +1,13 @@
 package tables
 
 import (
+	"testmgmt/biz"
+
 	"github.com/GoAdminGroup/go-admin/context"
 	"github.com/GoAdminGroup/go-admin/modules/db"
 	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
 	"github.com/GoAdminGroup/go-admin/template/types"
+	"github.com/GoAdminGroup/go-admin/template/types/action"
 	"github.com/GoAdminGroup/go-admin/template/types/form"
 )
 
@@ -32,6 +35,9 @@ func GetTestProgressScheduleTable(ctx *context.Context) table.Table {
 	info.AddField("更新时间", "updated_at", db.Timestamp)
 	info.AddField("删除时间", "deleted_at", db.Timestamp).
 		FieldHide()
+
+	projects := biz.GetProjects()
+	info.AddSelectBox("关联项目", projects, action.FieldFilter("project"))
 
 	info.SetTable("test_progress_schedule").SetTitle("测试计划").SetDescription("测试计划")
 

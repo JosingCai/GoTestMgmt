@@ -1,6 +1,8 @@
 package tables
 
 import (
+	"testmgmt/biz"
+
 	"github.com/GoAdminGroup/go-admin/context"
 	"github.com/GoAdminGroup/go-admin/modules/db"
 	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
@@ -34,20 +36,8 @@ func GetApiSumUpTable(ctx *context.Context) table.Table {
 		FieldHide()
 	info.AddField("删除时间", "deleted_at", db.Timestamp).
 		FieldHide()
-	info.AddSelectBox("关联项目", types.FieldOptions{
-		{Value: "BOOT3X", Text: "BOOT3X"},
-		{Value: "POWER", Text: "POWER"},
-		{Value: "REPORT", Text: "REPORT"},
-		{Value: "ACT2", Text: "ACT2"},
-		{Value: "FLOW", Text: "FLOW"},
-		{Value: "PORTAL", Text: "PORTAL"},
-		{Value: "CmpSaas", Text: "CmpSaas"},
-		{Value: "Catalog", Text: "Catalog"},
-		{Value: "Discovery", Text: "Discovery"},
-		{Value: "YDDUC", Text: "YDDUC"},
-		{Value: "XMDB", Text: "XMDB"},
-		{Value: "CmpCore", Text: "CmpCore"},
-	}, action.FieldFilter("project"))
+	projects := biz.GetProjects()
+	info.AddSelectBox("关联项目", projects, action.FieldFilter("project"))
 
 	info.SetTable("api_sum_up").SetTitle("API统计").SetDescription("API统计")
 
