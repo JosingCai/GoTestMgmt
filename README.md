@@ -61,6 +61,10 @@
 #### 数据统计
 - 单个API统计
 - 全部API统计
+- 测试用例统计
+
+#### 测试结果
+- 再次测试
 
 #### 图例说明：
 - 见doc/img目录
@@ -70,6 +74,7 @@
 ├── apicount.png
 ├── apidetail.png
 ├── casefile.png
+├── homepage.png
 ├── hostenv.png
 ├── resultdetail.png
 ├── testcase.png
@@ -77,5 +82,4 @@
 ```
 
 #### 说明
-- 功能持续完善中，部分菜单目前只做了数据展示,主页延用的goadmin，后续会更换
 - 使用有问题可以添加wx沟通：liuhuocjx

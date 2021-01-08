@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"testmgmt/models"
-
-	"github.com/GoAdminGroup/go-admin/template/types"
 )
 
 var (
@@ -15,28 +12,9 @@ var (
 	SERVER_PORT int
 )
 
-type Project struct {
-	Project string `gorm:"column:project" json:"project"`
-}
-
 type Config struct {
 	FileBasePath string `json:"file_base_path"`
 	ServerPort   int    `json:"server_port"`
-}
-
-func GetProjects() (projects []types.FieldOption) {
-	var dbProjects []Project
-	var project types.FieldOption
-	models.Orm.Table("host").Find(&dbProjects)
-
-	if len(dbProjects) >= 0 {
-		for _, item := range dbProjects {
-			project.Value = item.Project
-			project.Text = item.Project
-			projects = append(projects, project)
-		}
-	}
-	return
 }
 
 func init() {
@@ -66,6 +44,7 @@ func init() {
 			}
 		}
 	}
+
 	subPaths := [4]string{
 		BASEPATH + "/" + "api",
 		BASEPATH + "/" + "file",

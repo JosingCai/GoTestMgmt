@@ -65,13 +65,10 @@ func startServer() {
 		if config.GetTheme() == "adminlte" {
 			return pages.GetDashBoardContent(ctx)
 		} else {
-			return pages.GetDashBoard2Content(ctx)
+			return pages.GetDashBoardContent(ctx)
 		}
 	}))
 	r.GET("/admin/dashboard", ada.Content(pages.GetDashBoardContent))
-	r.GET("/admin/echarts/pic2", ada.Content(pages.GetDashBoard2Content))
-	r.GET("/admin/testreport", ada.Content(pages.GetTestReport))
-	r.GET("/admin/echarts/pic3", ada.Content(pages.GetDashBoard3Content))
 	r.POST("/admin/smoke", biz.StartSmoke)
 
 	plug, _ := plugins.FindByName("filemanager")
