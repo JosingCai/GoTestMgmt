@@ -2,51 +2,47 @@ package pages
 
 import (
 	"html/template"
+	"testmgmt/biz"
 
 	tmpl "github.com/GoAdminGroup/go-admin/template"
-	"github.com/GoAdminGroup/go-admin/template/chartjs"
-	"github.com/GoAdminGroup/go-admin/template/icon"
 	"github.com/GoAdminGroup/go-admin/template/types"
 	"github.com/GoAdminGroup/themes/adminlte/components/infobox"
 	"github.com/GoAdminGroup/themes/adminlte/components/smallbox"
-	"github.com/GoAdminGroup/themes/sword/components/chart_legend"
 	"github.com/gin-gonic/gin"
 )
-
-type Box struct {
-	Title  template.HTML
-	Color  template.HTML
-	Number template.HTML
-	Icon   template.HTML
-}
 
 func GetDashBoardContent(ctx *gin.Context) (types.Panel, error) {
 
 	components := tmpl.Default()
 	colComp := components.Col()
-	var size = types.SizeMD(3).SM(6).XS(12)
+	var size = types.SizeMD(2).SM(6).XS(12)
 	/**************************
 	 * Small Box
 	/**************************/
 
-	smallbox1 := smallbox.New().SetColor("yellow").SetIcon("fa-eye").SetUrl("/admin/info/api_case").SetTitle("api").SetValue("接口用例").GetContent()
-	smallbox2 := smallbox.New().SetColor("red").SetIcon("fa-eye-slash").SetUrl("/admin/info/test_case").SetTitle("case").SetValue("测试用例").GetContent()
-	smallbox3 := smallbox.New().SetColor("green").SetIcon("fa-fast-backward").SetUrl("/admin/info/api_sum_up").SetTitle("api count").SetValue("接口总览").GetContent()
-	smallbox4 := smallbox.New().SetColor("purple").SetIcon("fa-fast-forward").SetUrl("/admin/info/testcase_count").SetTitle("case count").SetValue("用例统计").GetContent()
+	smallbox1 := smallbox.New().SetColor("white").SetIcon("fa-fast-forward").SetUrl("/admin/info/host").SetTitle("host").SetValue("环境").GetContent()
+	smallbox2 := smallbox.New().SetColor("white").SetIcon("fa-fast-forward").SetUrl("/admin/info/api_case").SetTitle("api").SetValue("接口").GetContent()
+	smallbox3 := smallbox.New().SetColor("white").SetIcon("fa-fast-forward").SetUrl("/admin/info/api_test_data").SetTitle("data").SetValue("数据").GetContent()
+	smallbox4 := smallbox.New().SetColor("white").SetIcon("fa-fast-forward").SetUrl("/admin/info/test_case").SetTitle("case").SetValue("用例").GetContent()
+	smallbox5 := smallbox.New().SetColor("white").SetIcon("fa-fast-forward").SetUrl("/admin/info/api_test_detail").SetTitle("case count").SetValue("结果").GetContent()
 
 	col1 := colComp.SetSize(size).SetContent(smallbox1).GetContent()
 	col2 := colComp.SetSize(size).SetContent(smallbox2).GetContent()
 	col3 := colComp.SetSize(size).SetContent(smallbox3).GetContent()
 	col4 := colComp.SetSize(size).SetContent(smallbox4).GetContent()
+	col5 := colComp.SetSize(size).SetContent(smallbox5).GetContent()
 
-	row1 := components.Row().SetContent(col1 + col2 + col3 + col4).GetContent()
+	row1 := components.Row().SetContent(col1 + col2 + col3 + col4 + col5).GetContent()
 	/**************************
 	 * Info Box
 	/**************************/
-	box1 := Box{"CPU TRAFFIC", "aqua", "100", "ion-ios-gear-outline"}
-	box2 := Box{"Likes", "red", "1030.00<small>$</small>", icon.GooglePlus}
-	box3 := Box{"Sales", "green", "760", "ion-ios-cart-outline"}
-	box4 := Box{"New Members", "yellow", "2,349", "ion-ios-people-outline"}
+	boxPlural := biz.GetBoxData()
+
+	box1 := boxPlural[0]
+	box2 := boxPlural[1]
+	box3 := boxPlural[2]
+	box4 := boxPlural[3]
+	box5 := boxPlural[4]
 	infobox1 := infobox.New().
 		SetText(box1.Title).
 		SetColor(box1.Color).
@@ -74,29 +70,12 @@ func GetDashBoardContent(ctx *gin.Context) (types.Panel, error) {
 		SetNumber(box4.Number).
 		SetIcon(box4.Icon).
 		GetContent()
+
 	infobox5 := infobox.New().
-		SetText(box4.Title).
-		SetColor(box4.Color).
-		SetNumber(box4.Number).
-		SetIcon(box4.Icon).
-		GetContent()
-	infobox6 := infobox.New().
-		SetText(box4.Title).
-		SetColor(box4.Color).
-		SetNumber(box4.Number).
-		SetIcon(box4.Icon).
-		GetContent()
-	infobox7 := infobox.New().
-		SetText(box4.Title).
-		SetColor(box4.Color).
-		SetNumber(box4.Number).
-		SetIcon(box4.Icon).
-		GetContent()
-	infobox8 := infobox.New().
-		SetText(box4.Title).
-		SetColor(box4.Color).
-		SetNumber(box4.Number).
-		SetIcon(box4.Icon).
+		SetText(box5.Title).
+		SetColor(box5.Color).
+		SetNumber(box5.Number).
+		SetIcon(box5.Icon).
 		GetContent()
 
 	infoboxCol1 := colComp.SetSize(size).SetContent(infobox1).GetContent()
@@ -104,106 +83,35 @@ func GetDashBoardContent(ctx *gin.Context) (types.Panel, error) {
 	infoboxCol3 := colComp.SetSize(size).SetContent(infobox3).GetContent()
 	infoboxCol4 := colComp.SetSize(size).SetContent(infobox4).GetContent()
 	infoboxCol5 := colComp.SetSize(size).SetContent(infobox5).GetContent()
-	infoboxCol6 := colComp.SetSize(size).SetContent(infobox6).GetContent()
-	infoboxCol7 := colComp.SetSize(size).SetContent(infobox7).GetContent()
-	infoboxCol8 := colComp.SetSize(size).SetContent(infobox8).GetContent()
-	row2 := components.Row().SetContent(infoboxCol1 + infoboxCol2 + infoboxCol3 + infoboxCol4 + infoboxCol5 + infoboxCol6 + infoboxCol7 + infoboxCol8).GetContent()
+
+	row2 := components.Row().SetContent(infoboxCol1 + infoboxCol2 + infoboxCol3 + infoboxCol4 + infoboxCol5).GetContent()
 
 	/**************************
 	 * Box
 	/**************************/
-
-	table := components.Table().SetInfoList([]map[string]types.InfoItem{
-		{
-			"Order ID":   {Content: "OR9842"},
-			"Item":       {Content: "Call of Duty IV"},
-			"Status":     {Content: "shipped"},
-			"Popularity": {Content: "90%"},
-		}, {
-			"Order ID":   {Content: "OR9842"},
-			"Item":       {Content: "Call of Duty IV"},
-			"Status":     {Content: "shipped"},
-			"Popularity": {Content: "90%"},
-		}, {
-			"Order ID":   {Content: "OR9842"},
-			"Item":       {Content: "Call of Duty IV"},
-			"Status":     {Content: "shipped"},
-			"Popularity": {Content: "90%"},
-		}, {
-			"Order ID":   {Content: "OR9842"},
-			"Item":       {Content: "Call of Duty IV"},
-			"Status":     {Content: "shipped"},
-			"Popularity": {Content: "90%"},
-		},
-	}).SetThead(types.Thead{
-		{Head: "Order ID"},
-		{Head: "Item"},
-		{Head: "Status"},
-		{Head: "Popularity"},
-		{Head: "Popularity"},
-		{Head: "Popularity"},
-		{Head: "Popularity"},
+	apiSumUp := biz.GetAPISumUp()
+	table := components.Table().SetInfoList(apiSumUp).SetThead(types.Thead{
+		{Head: "关联项目"},
+		{Head: "API总数"},
+		{Head: "可自动化数"},
+		{Head: "不可自动化数"},
+		{Head: "自动化测试总数"},
+		{Head: "未测试总数"},
+		{Head: "通过总数"},
+		{Head: "失败总数"},
 	}).GetContent()
 
 	row3 := components.Box().
 		WithHeadBorder().
-		SetHeader("Latest Orders").
+		SetHeader("接口总览 - top10").
 		SetHeadColor("#f7f7f7").
 		SetBody(table).
 		GetContent()
 
-	/**************************
-	 * Pie Chart
-	/**************************/
-
-	pie := chartjs.Pie().
-		SetHeight(170).
-		SetLabels([]string{"Navigator", "Opera", "Safari", "FireFox", "IE", "Chrome"}).
-		SetID("pieChart").
-		AddDataSet("Chrome").
-		DSData([]float64{100, 300, 600, 400, 500, 700}).
-		DSBackgroundColor([]chartjs.Color{
-			"rgb(255, 205, 86)", "rgb(54, 162, 235)", "rgb(255, 99, 132)", "rgb(255, 205, 86)", "rgb(54, 162, 235)", "rgb(255, 99, 132)",
-		}).
-		GetContent()
-
-	legend := chart_legend.New().SetData([]map[string]string{
-		{
-			"label": " Chrome",
-			"color": "red",
-		}, {
-			"label": " IE",
-			"color": "Green",
-		}, {
-			"label": " FireFox",
-			"color": "yellow",
-		}, {
-			"label": " Sarafri",
-			"color": "blue",
-		}, {
-			"label": " Opera",
-			"color": "light-blue",
-		}, {
-			"label": " Navigator",
-			"color": "gray",
-		},
-	}).GetContent()
-
-	boxDanger := components.Box().SetTheme("danger").WithHeadBorder().SetHeader("Project").
-		SetBody(components.Row().
-			SetContent(colComp.SetSize(types.SizeMD(4)).
-				SetContent(pie).
-				GetContent() + colComp.SetSize(types.SizeMD(4)).
-				SetContent(legend).
-				GetContent()).GetContent()).
-		GetContent()
-	row4 := components.Row().SetContent(boxDanger).GetContent()
-	// row6 := components.Row().SetContent(boxcol).GetContent()
-
 	tabs := components.Tabs().SetData([]map[string]template.HTML{
 		{
 			"title": "环境配置说明",
-			"content": template.HTML(`<b>使用示例：:</b>
+			"content": template.HTML(`<b>示例:</b>
                 <p>1. 新建测试环境TEST</p>
                 <p>2. 在文件管理Swagger子菜单：导入API文件(TEST.json), 导入测试用例文件（TEST.xmind）</p>
                 <p>3. 选中环境，点击Swagger导入API用例，在用例菜单下即可看到对应API数据</p>
@@ -229,10 +137,16 @@ func GetDashBoardContent(ctx *gin.Context) (types.Panel, error) {
 		},
 	}).GetContent()
 
-	row5 := components.Row().SetContent(tabs).GetContent()
+	useDanger := components.Box().SetTheme("danger").WithHeadBorder().SetHeader("使用说明").
+		SetBody(components.Row().
+			SetContent(colComp.SetSize(types.SizeMD(16)).
+				SetContent(tabs).
+				GetContent()).GetContent()).
+		GetContent()
+	row5 := components.Row().SetContent(useDanger).GetContent()
 
 	return types.Panel{
-		Content:     row1 + row3 + row2 + row4 + row5,
+		Content:     row1 + row2 + row5 + row3,
 		Title:       "Dashboard",
 		Description: "",
 	}, nil
