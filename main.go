@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"flag"
 
 	"github.com/gin-contrib/pprof"
 
@@ -33,7 +34,35 @@ import (
 	"github.com/GoAdminGroup/filemanager"
 )
 
+type Args struct {
+	Config         string
+	Upload         string
+}
+
+var args Args
+type FileMode uint32
+const ModePerm FileMode = 0644
+
+func (args *Args) InstallFlags() {
+	flag.StringVar(&args.Config, "c", "./config.json", "Config file")
+	flag.StringVar(&args.Upload, "u", "./uploads", "Upload file")
+}
+
+func init() {
+	args.InstallFlags()
+	if _, err := os.Stat(args.Config); os.IsNotExist(err) {
+        panic(err)
+	}
+
+	if _, err := os.Stat(args.Upload); os.IsNotExist(err) {
+    	os.Mkdir(args.Upload, os.ModePerm)
+	}
+	return
+}
+
+
 func main() {
+	flag.Parse()
 	startServer()
 }
 
@@ -48,13 +77,13 @@ func startServer() {
 
 	eng := engine.Default()
 
-	if err := eng.AddConfigFromJSON("./config.json").
+	if err := eng.AddConfigFromJSON(args.Config).
 		AddGenerators(tables.Generators).
 		Use(r); err != nil {
 		panic(err)
 	}
 
-	r.Static("/uploads", "/uploads")
+	r.Static("/uploads", args.Upload)
 
 	// you can custom your pages like:
 	r.GET("/", func(ctx *gin.Context) {
@@ -81,7 +110,11 @@ func startServer() {
 
 	models.Init(eng.MysqlConnection())
 	listen := fmt.Sprintf(":%d", biz.SERVER_PORT)
-	_ = r.Run(listen)
+	
+	err := r.Run(listen)
+	if err != nil {
+		panic(err)
+	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)

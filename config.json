@@ -26,9 +26,9 @@
 	"login_url": "/login",
 	"debug": true,
 	"env": "local",
-	"info_log": "testmgmt/logs/info.log",
-	"error_log": "testmgmt/logs/error.log",
-	"access_log": "testmgmt/logs/access.log",
+	"info_log": "./logs/info.log",
+	"error_log": "./logs/error.log",
+	"access_log": "./logs/access.log",
 	"session_life_time": 7200,
 	"file_upload_engine": {
 		"name": "local"
@@ -36,8 +36,8 @@
 	"login_title": "TestMgmt",
 	"login_logo": "TestMgmt",
 	"auth_user_table": "goadmin_users",
-	"bootstrap_file_path": "testmgmt/bootstrap.go",
-	"go_mod_file_path": "testmgmt/go.mod",
+	"bootstrap_file_path": "./bootstrap.go",
+	"go_mod_file_path": "./go.mod",
 	"asset_root_path": "./public/",
 	"file_base_path": "/tmp",
 	"server_port": 9033
